@@ -5,6 +5,11 @@ packages:
   - ufw
 
 runcmd:
-  # TODO: install k3s
-  # TODO: allow 22, 80, 443, 6443 in UFW
-  # TODO: set UFW defaults and enable
+  - curl -sfL https://get.k3s.io | sh -
+  - ufw allow 22/tcp
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw allow 6443/tcp
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw --force enable

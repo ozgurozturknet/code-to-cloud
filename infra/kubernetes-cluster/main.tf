@@ -34,11 +34,12 @@ resource "hcloud_firewall" "k8s" {
   }
 }
 
-# TODO: define the hcloud_server resource (k8s node).
-#   name         = "${var.environment}-k8s-node"
-#   image        = "ubuntu-24.04"
-#   server_type  = var.server_type
-#   location     = var.location
-#   ssh_keys     = [data.hcloud_ssh_key.k8s.id]
-#   firewall_ids = [hcloud_firewall.k8s.id]
-#   user_data    = file("${path.module}/cloud-init-k3s.yml")
+resource "hcloud_server" "k8s_node" {
+  name         = "${var.environment}-k8s-node"
+  image        = "ubuntu-24.04"
+  server_type  = var.server_type
+  location     = var.location
+  ssh_keys     = [data.hcloud_ssh_key.k8s.id]
+  firewall_ids = [hcloud_firewall.k8s.id]
+  user_data    = file("${path.module}/cloud-init-k3s.yml")
+}
