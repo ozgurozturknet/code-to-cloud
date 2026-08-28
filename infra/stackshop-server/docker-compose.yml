@@ -87,7 +87,7 @@ services:
   # ── Application ─────────────────────────────────────────────────────────────
 
   user-service:
-    # TODO: image: ${REGISTRY}/???
+    image: ${REGISTRY}/user-service:latest
     restart: unless-stopped
     depends_on:
       postgres:
@@ -109,7 +109,7 @@ services:
       - proxy
 
   product-service:
-    # TODO: image: ${REGISTRY}/???
+    image: ${REGISTRY}/product-service:latest
     restart: unless-stopped
     depends_on:
       postgres:
@@ -134,7 +134,7 @@ services:
       - proxy
 
   order-service:
-    # TODO: image: ${REGISTRY}/???
+    image: ${REGISTRY}/order-service:latest
     restart: unless-stopped
     depends_on:
       postgres:
@@ -159,7 +159,7 @@ services:
       - proxy
 
   cart-service:
-    # TODO: image: ${REGISTRY}/???
+    image: ${REGISTRY}/cart-service:latest
     restart: unless-stopped
     depends_on:
       redis:
@@ -181,7 +181,7 @@ services:
       - proxy
 
   search-service:
-    # TODO: image: ${REGISTRY}/???
+    image: ${REGISTRY}/search-service:latest
     restart: unless-stopped
     depends_on:
       elasticsearch:
@@ -202,7 +202,7 @@ services:
       - proxy
 
   notification-service:
-    # TODO: image: ${REGISTRY}/???
+    image: ${REGISTRY}/notification-service:latest
     restart: unless-stopped
     depends_on:
       kafka:
@@ -212,7 +212,7 @@ services:
       PORT: 8007
 
   review-service:
-    # TODO: image: ${REGISTRY}/???
+    image: ${REGISTRY}/review-service:latest
     restart: unless-stopped
     depends_on:
       mongodb:
@@ -234,7 +234,7 @@ services:
       - proxy
 
   storefront:
-    # TODO: image: ${REGISTRY}/???
+    image: ${REGISTRY}/storefront:latest
     restart: unless-stopped
     depends_on:
       - user-service
@@ -252,16 +252,15 @@ services:
       NEXT_PUBLIC_REVIEW_SERVICE_URL: https://review.${DOMAIN}
       INTERNAL_PRODUCT_SERVICE_URL: http://product-service:8002
       INTERNAL_SEARCH_SERVICE_URL: http://search-service:8005
-    # TODO: add Traefik labels so the storefront is reachable at stackshop.${DOMAIN}
-    # labels:
-    #   - "traefik.enable=???"
-    #   - "traefik.http.routers.stackshop.rule=Host(`???.${DOMAIN}`)"
-    #   - "traefik.http.routers.stackshop.entrypoints=???"
-    #   - "traefik.http.routers.stackshop.tls.certresolver=???"
-    #   - "traefik.http.services.stackshop.loadbalancer.server.port=???"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.stackshop.rule=Host(`stackshop.${DOMAIN}`)"
+      - "traefik.http.routers.stackshop.entrypoints=websecure"
+      - "traefik.http.routers.stackshop.tls.certresolver=letsencrypt"
+      - "traefik.http.services.stackshop.loadbalancer.server.port=3000"
     networks:
       - default
-      # TODO: also connect to the "proxy" network so Traefik can reach it
+      - proxy
 
 networks:
   default:
