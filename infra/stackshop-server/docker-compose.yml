@@ -1,0 +1,275 @@
+name: stackshop
+
+services:
+
+  # ── Infrastructure ──────────────────────────────────────────────────────────
+  # These are provided for you — same as Section 4.
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../postgres/init.sh:/docker-entrypoint-initdb.d/init.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    restart: unless-stopped
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  elasticsearch:
+    image: elasticsearch:8.12.0
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health | grep -v '\"status\":\"red\"'"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  # ── Application ─────────────────────────────────────────────────────────────
+
+  user-service:
+    # TODO: image: ${REGISTRY}/???
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/users
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 8001
+    ports:
+      - "8001:8001"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.user.rule=Host(`user.${DOMAIN}`)"
+      - "traefik.http.routers.user.entrypoints=websecure"
+      - "traefik.http.routers.user.tls.certresolver=letsencrypt"
+      - "traefik.http.services.user.loadbalancer.server.port=8001"
+    networks:
+      - default
+      - proxy
+
+  product-service:
+    # TODO: image: ${REGISTRY}/???
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/products
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 8002
+    ports:
+      - "8002:8002"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.product.rule=Host(`product.${DOMAIN}`)"
+      - "traefik.http.routers.product.entrypoints=websecure"
+      - "traefik.http.routers.product.tls.certresolver=letsencrypt"
+      - "traefik.http.services.product.loadbalancer.server.port=8002"
+    networks:
+      - default
+      - proxy
+
+  order-service:
+    # TODO: image: ${REGISTRY}/???
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/orders
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 8003
+    ports:
+      - "8003:8003"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.order.rule=Host(`order.${DOMAIN}`)"
+      - "traefik.http.routers.order.entrypoints=websecure"
+      - "traefik.http.routers.order.tls.certresolver=letsencrypt"
+      - "traefik.http.services.order.loadbalancer.server.port=8003"
+    networks:
+      - default
+      - proxy
+
+  cart-service:
+    # TODO: image: ${REGISTRY}/???
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 8004
+    ports:
+      - "8004:8004"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cart.rule=Host(`cart.${DOMAIN}`)"
+      - "traefik.http.routers.cart.entrypoints=websecure"
+      - "traefik.http.routers.cart.tls.certresolver=letsencrypt"
+      - "traefik.http.services.cart.loadbalancer.server.port=8004"
+    networks:
+      - default
+      - proxy
+
+  search-service:
+    # TODO: image: ${REGISTRY}/???
+    restart: unless-stopped
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      PORT: 8005
+    ports:
+      - "8005:8005"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.search.rule=Host(`search.${DOMAIN}`)"
+      - "traefik.http.routers.search.entrypoints=websecure"
+      - "traefik.http.routers.search.tls.certresolver=letsencrypt"
+      - "traefik.http.services.search.loadbalancer.server.port=8005"
+    networks:
+      - default
+      - proxy
+
+  notification-service:
+    # TODO: image: ${REGISTRY}/???
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      PORT: 8007
+
+  review-service:
+    # TODO: image: ${REGISTRY}/???
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      MONGODB_URL: mongodb://mongodb:27017/reviews
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 8006
+    ports:
+      - "8006:8006"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.review.rule=Host(`review.${DOMAIN}`)"
+      - "traefik.http.routers.review.entrypoints=websecure"
+      - "traefik.http.routers.review.tls.certresolver=letsencrypt"
+      - "traefik.http.services.review.loadbalancer.server.port=8006"
+    networks:
+      - default
+      - proxy
+
+  storefront:
+    # TODO: image: ${REGISTRY}/???
+    restart: unless-stopped
+    depends_on:
+      - user-service
+      - product-service
+      - order-service
+      - cart-service
+      - search-service
+      - review-service
+    environment:
+      NEXT_PUBLIC_USER_SERVICE_URL: https://user.${DOMAIN}
+      NEXT_PUBLIC_PRODUCT_SERVICE_URL: https://product.${DOMAIN}
+      NEXT_PUBLIC_ORDER_SERVICE_URL: https://order.${DOMAIN}
+      NEXT_PUBLIC_CART_SERVICE_URL: https://cart.${DOMAIN}
+      NEXT_PUBLIC_SEARCH_SERVICE_URL: https://search.${DOMAIN}
+      NEXT_PUBLIC_REVIEW_SERVICE_URL: https://review.${DOMAIN}
+      INTERNAL_PRODUCT_SERVICE_URL: http://product-service:8002
+      INTERNAL_SEARCH_SERVICE_URL: http://search-service:8005
+    # TODO: add Traefik labels so the storefront is reachable at stackshop.${DOMAIN}
+    # labels:
+    #   - "traefik.enable=???"
+    #   - "traefik.http.routers.stackshop.rule=Host(`???.${DOMAIN}`)"
+    #   - "traefik.http.routers.stackshop.entrypoints=???"
+    #   - "traefik.http.routers.stackshop.tls.certresolver=???"
+    #   - "traefik.http.services.stackshop.loadbalancer.server.port=???"
+    networks:
+      - default
+      # TODO: also connect to the "proxy" network so Traefik can reach it
+
+networks:
+  default:
+  proxy:
+    external: true
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:
+  es_data:
