@@ -5,9 +5,20 @@ packages:
   - ufw
 
 runcmd:
-  # TODO: install Docker
-  # TODO: create the stackshop user, add to sudo and docker groups
-  # TODO: copy SSH keys to the stackshop user
-  # TODO: enable UFW, allow 22, 80, 443
-  # TODO: enable and start Docker
-  # TODO: create the "proxy" docker network
+  - curl -fsSL https://get.docker.com | sh
+  - adduser --disabled-password --gecos "" stackshop
+  - usermod -aG sudo,docker stackshop
+  - mkdir -p /home/stackshop/.ssh
+  - cp /root/.ssh/authorized_keys /home/stackshop/.ssh/
+  - chown -R stackshop:stackshop /home/stackshop/.ssh
+  - chmod 700 /home/stackshop/.ssh
+  - chmod 600 /home/stackshop/.ssh/authorized_keys
+  - ufw --force enable
+  - ufw allow 22/tcp
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - systemctl enable docker
+  - systemctl start docker
+  - docker network create proxy

@@ -27,11 +27,12 @@ resource "hcloud_firewall" "stackshop" {
   }
 }
 
-# TODO: define the hcloud_server resource.
-#   name         = "${var.environment}-stackshop"
-#   image        = "ubuntu-24.04"
-#   server_type  = var.server_type
-#   location     = var.location
-#   ssh_keys     = [data.hcloud_ssh_key.default.id]
-#   firewall_ids = [hcloud_firewall.stackshop.id]
-#   user_data    = file("${path.module}/cloud-init.yml")
+resource "hcloud_server" "stackshop" {
+  name         = "${var.environment}-stackshop"
+  image        = "ubuntu-24.04"
+  server_type  = var.server_type
+  location     = var.location
+  ssh_keys     = [data.hcloud_ssh_key.default.id]
+  firewall_ids = [hcloud_firewall.stackshop.id]
+  user_data    = file("${path.module}/cloud-init.yml")
+}
