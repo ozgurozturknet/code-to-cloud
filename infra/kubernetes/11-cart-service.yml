@@ -1,0 +1,20 @@
+# TODO: write the cart-service manifest - your challenge.
+#
+# It needs two objects, same shape as 08-user-service.yml:
+#
+# 1. A Deployment:
+#    - name: cart-service, namespace: stackshop
+#    - replicas: 2, label app: cart-service
+#    - image: ghcr.io/YOUR_GITHUB_USERNAME/cart-service:latest
+#    - containerPort: 8004
+#    - env:
+#        PORT = "8004"
+#        REDIS_URL  <- from ConfigMap stackshop-config, key REDIS_URL
+#        JWT_SECRET <- from Secret stackshop-secrets, key JWT_SECRET
+#
+# 2. A Service:
+#    - name: cart-service, selector app: cart-service
+#    - port 8004, targetPort 8004
+#
+# The cart has no database of its own - it lives in Redis, which is already
+# handled by 05-redis.yml.
