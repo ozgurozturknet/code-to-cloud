@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: storefront
+  namespace: stackshop
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: storefront
+  template:
+    metadata:
+      labels:
+        app: storefront
+    spec:
+      containers:
+        - name: storefront
+          image: ghcr.io/YOUR_GITHUB_USERNAME/storefront:latest
+          ports:
+            - containerPort: 3000
+          env:
+            # Public URLs — used by the browser to call each service via Ingress.
+            # Replace YOUR_DOMAIN with your actual domain.
+            # Note: Next.js NEXT_PUBLIC_* vars are baked at build time.
+            # For a fully correct production setup, rebuild the storefront image
+            # with these values set. For learning purposes, set them here.
+            - name: NEXT_PUBLIC_USER_SERVICE_URL
+              value: "http://user.YOUR_DOMAIN"
+            - name: NEXT_PUBLIC_PRODUCT_SERVICE_URL
+              value: "http://product.YOUR_DOMAIN"
+            - name: NEXT_PUBLIC_ORDER_SERVICE_URL
+              value: "http://order.YOUR_DOMAIN"
+            - name: NEXT_PUBLIC_CART_SERVICE_URL
+              value: "http://cart.YOUR_DOMAIN"
+            - name: NEXT_PUBLIC_SEARCH_SERVICE_URL
+              value: "http://search.YOUR_DOMAIN"
+            - name: NEXT_PUBLIC_REVIEW_SERVICE_URL
+              value: "http://review.YOUR_DOMAIN"
+            # Internal URLs — used by Next.js server-side code inside the cluster
+            - name: INTERNAL_PRODUCT_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: stackshop-config
+                  key: PRODUCT_SERVICE_URL
+            - name: INTERNAL_SEARCH_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: stackshop-config
+                  key: SEARCH_SERVICE_URL
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: storefront
+  namespace: stackshop
+spec:
+  selector:
+    app: storefront
+  ports:
+    - port: 3000
+      targetPort: 3000

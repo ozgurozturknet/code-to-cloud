@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stackshop-config
+  namespace: stackshop
+data:
+  KAFKA_BROKERS: "kafka:9092"
+  MONGO_URL: "mongodb://mongodb:27017"
+  MONGO_DB: "stackshop"
+  REDIS_URL: "redis://redis:6379"
+  ELASTICSEARCH_URL: "http://elasticsearch:9200"
+  PRODUCT_SERVICE_URL: "http://product-service:8002"
+  SEARCH_SERVICE_URL: "http://search-service:8005"
+---
+# Init script for Postgres — creates the three application databases on first boot
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: stackshop
+data:
+  init.sh: |
+    #!/bin/bash
+    set -e
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
+      CREATE DATABASE users;
+      CREATE DATABASE products;
+      CREATE DATABASE orders;
+    EOSQL

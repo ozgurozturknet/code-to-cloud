@@ -1,0 +1,3 @@
+environment  = "dev"
+server_type  = "cx31"
+location     = "hel1"

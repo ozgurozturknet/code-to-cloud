@@ -1,0 +1,10 @@
+#cloud-config
+
+packages:
+  - curl
+  - ufw
+
+runcmd:
+  # TODO: install k3s
+  # TODO: allow 22, 80, 443, 6443 in UFW
+  # TODO: set UFW defaults and enable

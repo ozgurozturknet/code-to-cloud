@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+  namespace: stackshop
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: product-service
+  template:
+    metadata:
+      labels:
+        app: product-service
+    spec:
+      containers:
+        - name: product-service
+          image: ghcr.io/YOUR_GITHUB_USERNAME/product-service:latest
+          ports:
+            - containerPort: 8002
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: stackshop-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: stackshop-secrets
+                  key: POSTGRES_PASSWORD
+            - name: PORT
+              value: "8002"
+            - name: DB_URL
+              value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres:5432/products?sslmode=disable"
+            - name: MONGO_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: stackshop-config
+                  key: MONGO_URL
+            - name: MONGO_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: stackshop-config
+                  key: MONGO_DB
+            - name: KAFKA_BROKERS
+              valueFrom:
+                configMapKeyRef:
+                  name: stackshop-config
+                  key: KAFKA_BROKERS
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: stackshop-secrets
+                  key: JWT_SECRET
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+  namespace: stackshop
+spec:
+  selector:
+    app: product-service
+  ports:
+    - port: 8002
+      targetPort: 8002
