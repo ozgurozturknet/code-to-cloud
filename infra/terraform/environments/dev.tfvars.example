@@ -1,0 +1,11 @@
+# Dev environment variables
+# Copy this file to dev.tfvars and fill in your values.
+# Do not commit dev.tfvars - it may contain sensitive values.
+# Secrets (hetzner_token, cloudflare_token) should be set
+# as environment variables: TF_VAR_hetzner_token, etc.
+
+environment        = "dev"
+server_type        = "cx33"
+location           = "hel1"
+cloudflare_zone_id = "YOUR_CLOUDFLARE_ZONE_ID"
+domain             = "yourdomain.xyz"

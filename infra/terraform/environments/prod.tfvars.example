@@ -1,0 +1,11 @@
+# Prod environment variables
+# Copy this file to prod.tfvars and fill in your values.
+# Do not commit prod.tfvars - it may contain sensitive values.
+# Secrets (hetzner_token, cloudflare_token) should be set
+# as environment variables: TF_VAR_hetzner_token, etc.
+
+environment        = "prod"
+server_type        = "cx33"
+location           = "hel1"
+cloudflare_zone_id = "YOUR_CLOUDFLARE_ZONE_ID"
+domain             = "yourdomain.xyz"

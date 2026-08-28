@@ -1,0 +1,13 @@
+#cloud-config
+
+packages:
+  - curl
+  - ufw
+
+runcmd:
+  # TODO: install Docker
+  # TODO: create the stackshop user, add to sudo and docker groups
+  # TODO: copy SSH keys to the stackshop user
+  # TODO: enable UFW, allow 22, 80, 443
+  # TODO: enable and start Docker
+  # TODO: create the "proxy" docker network
