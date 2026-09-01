@@ -1,20 +1,52 @@
-# TODO: write the cart-service manifest - your challenge.
-#
-# It needs two objects, same shape as 08-user-service.yml:
-#
-# 1. A Deployment:
-#    - name: cart-service, namespace: stackshop
-#    - replicas: 2, label app: cart-service
-#    - image: ghcr.io/YOUR_GITHUB_USERNAME/cart-service:latest
-#    - containerPort: 8004
-#    - env:
-#        PORT = "8004"
-#        REDIS_URL  <- from ConfigMap stackshop-config, key REDIS_URL
-#        JWT_SECRET <- from Secret stackshop-secrets, key JWT_SECRET
-#
-# 2. A Service:
-#    - name: cart-service, selector app: cart-service
-#    - port 8004, targetPort 8004
-#
-# The cart has no database of its own - it lives in Redis, which is already
-# handled by 05-redis.yml.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cart-service
+  namespace: stackshop
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cart-service
+  template:
+    metadata:
+      labels:
+        app: cart-service
+    spec:
+      containers:
+        - name: cart-service
+          image: ghcr.io/YOUR_GITHUB_USERNAME/cart-service:latest
+          ports:
+            - containerPort: 8004
+          env:
+            - name: PORT
+              value: "8004"
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: stackshop-config
+                  key: REDIS_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: stackshop-secrets
+                  key: JWT_SECRET
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cart-service
+  namespace: stackshop
+spec:
+  selector:
+    app: cart-service
+  ports:
+    - port: 8004
+      targetPort: 8004
